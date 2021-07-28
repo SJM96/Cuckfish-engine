@@ -1,5 +1,6 @@
 import click
 import chess
+import sys
 from progress.bar import Bar
 from time import sleep
 from .engine import ChessEngine
@@ -64,3 +65,4 @@ class ChessGame:
         outcome = self.board.outcome()
         if outcome:
             click.echo("Game has ended: " + outcome.result())
+            sys.exit("Rekt")

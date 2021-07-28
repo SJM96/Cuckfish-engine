@@ -10,7 +10,7 @@ class ChessEngine:
 
     def __init__(self, side: chess.Color):
         """Initialize the playing side and the opening book."""
-        self.side = side
+        self.side = chess.WHITE if side == "White" else chess.BLACK
         try:
             ob_file = Path(__file__).parent / "openings.bin"  # Insert name of opening book here
             self.opening_book = chess.polyglot.open_reader(ob_file)
@@ -34,13 +34,14 @@ class ChessEngine:
             if opening_moves:
                 # Choice is randomized between the top 3 moves
                 # from the book so that same moves are not always played
+                click.echo("This is from the opening book.")
                 return random.choice(opening_moves[:3])
 
         # Check for mate in ones
         remaining_moves = san_moves.copy()
-        for next_move in san_moves:
+        for move in san_moves:
             test_board = board.copy()
-            test_board.push_san(next_move)
+            test_board.push_san(move)
             outcome = test_board.outcome()
             if outcome:
                 if outcome.winner is self.side:
@@ -54,16 +55,20 @@ class ChessEngine:
             # All legal moves lead to loss so doesn't matter what is played
             return random.choice(san_moves)
 
-        # Check if any legal move takes a piece
-        takes = [i for i in san_moves if "x" in i]  # Should do this instead with board.move.is_capture()
-        if takes:
-            for take in takes:
-                square_to_take = chess.parse_square(take[2:])
-                board.piece_type_at(square_to_take)
-                # TODO get max piece type
-            return random.choice(takes)
-        else:
-            return random.choice(san_moves)
+        best_score = -1000
+        for move in remaining_moves:
+            test_board = board.copy()
+            test_board.push_san(move)
+            score_after_move = self.evaluate_board(test_board)
+            if self.side is chess.BLACK:
+                score_after_move *= -1
+            if score_after_move > best_score:
+                ok_moves = []
+                ok_moves.append(move)
+                best_score = score_after_move
+            elif score_after_move == best_score:
+                ok_moves.append(move)
+        return random.choice(ok_moves)
 
     def check_opening_sequence(self, board: chess.Board) -> list:
         """Get all next moves suggested by an opening book.
@@ -76,3 +81,16 @@ class ChessEngine:
             move_san = board.san(entry.move)
             opening_moves.append(move_san)
         return opening_moves
+
+    def evaluate_board(self, board: chess.Board) -> float:
+        """Calculate current game score.
+
+        :param board: Current state of board
+        :returns: current game score
+        """
+        total = 0
+        vals = {1: 1, 2: 3, 3: 3, 4: 5, 5: 9}
+        for i in range(1, 6):
+            total += len(board.pieces(i, chess.WHITE)) * vals[i]
+            total -= len(board.pieces(i, chess.BLACK)) * vals[i]
+        return total
