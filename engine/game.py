@@ -36,6 +36,7 @@ class ChessGame:
             move = click.prompt(self.player_color + " plays", type=str)
             click.echo()
             self.board.push_san(move)
+            self.check_game_state()
             self.engine_move()
         except ValueError:
             click.echo("Given input is not standard algebraic notation of a legal move in this position")
@@ -55,4 +56,11 @@ class ChessGame:
         click.echo("-"*15)
         click.echo(self.engine_color + " plays: " + move)
         click.echo()
+        self.check_game_state()
         self.player_move()
+
+    def check_game_state(self):
+        """Check if game has ended."""
+        outcome = self.board.outcome()
+        if outcome:
+            click.echo("Game has ended: " + outcome.result())
