@@ -8,8 +8,9 @@ from pathlib import Path
 class ChessEngine:
     """The artificial system that calculates the next move for the current game state."""
 
-    def __init__(self):
-        """Initialize the opening book."""
+    def __init__(self, side: chess.Color):
+        """Initialize the playing side and the opening book."""
+        self.side = side
         try:
             ob_file = Path(__file__).parent / "openings.bin"  # Insert name of opening book here
             self.opening_book = chess.polyglot.open_reader(ob_file)
@@ -34,6 +35,24 @@ class ChessEngine:
                 # Choice is randomized between the top 3 moves
                 # from the book so that same moves are not always played
                 return random.choice(opening_moves[:3])
+
+        # Check for mate in ones
+        remaining_moves = san_moves.copy()
+        for next_move in san_moves:
+            test_board = board.copy()
+            test_board.push_san(next_move)
+            outcome = test_board.outcome()
+            if outcome:
+                if outcome.winner is self.side:
+                    # Winning move is played
+                    return move
+                elif outcome.winner is not self.side:
+                    # Losing move is removed from playable move list
+                    remaining_moves.remove(move)
+
+        if not remaining_moves:
+            # All legal moves lead to loss so doesn't matter what is played
+            return random.choice(san_moves)
 
         # Check if any legal move takes a piece
         takes = [i for i in san_moves if "x" in i]  # Should do this instead with board.move.is_capture()

@@ -11,12 +11,12 @@ class ChessGame:
     def __init__(self):
         """Initiate a game instance."""
         self.board = chess.Board()
-        self.engine = ChessEngine()
         player_choice = None
         while player_choice is None:
             player_choice = self.choose_side()
         self.player_color = "White" if player_choice else "Black"
         self.engine_color = "White" if not player_choice else "Black"
+        self.engine = ChessEngine(self.engine_color)
         self.player_move() if player_choice else self.engine_move()
 
     def choose_side(self):
