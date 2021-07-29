@@ -45,12 +45,12 @@ class ChessGame:
 
     def engine_move(self):
         """Update the board according to which move the engine makes."""
-        moves = list(self.board.legal_moves)
-        with click.progressbar(moves, label="Calculating") as bar:
-            for i in bar:
-                sleep(0.05)
+        # Amazing loading bar
+        # moves = list(self.board.legal_moves)
+        # with click.progressbar(moves, label="Calculating") as bar:
+        #     for i in bar:
+        #         sleep(0.05)
         move = self.engine.next_move(self.board)
-        # move_san = self.board.san(move)
         self.board.push_san(move)
         click.echo("-"*15)
         click.echo(self.board)

@@ -37,38 +37,37 @@ class ChessEngine:
                 click.echo("This is from the opening book.")
                 return random.choice(opening_moves[:3])
 
-        # Check for mate in ones
-        remaining_moves = san_moves.copy()
+        # curr_score = self.evaluate_board(board)
+        # remaining_moves = san_moves.copy()
+        evaluated_moves = []
         for move in san_moves:
             test_board = board.copy()
             test_board.push_san(move)
-            outcome = test_board.outcome()
-            if outcome:
-                if outcome.winner is self.side:
-                    # Winning move is played
-                    return move
-                elif outcome.winner is not self.side:
-                    # Losing move is removed from playable move list
-                    remaining_moves.remove(move)
+            new_uci_moves = list(test_board.legal_moves)
+            new_san_moves = [test_board.san(new_move) for new_move in new_uci_moves]
+            best_opp_score = -1000
+            for opp_move in new_san_moves:
+                new_test_board = test_board.copy()
+                new_test_board.push_san(opp_move)
+                score = self.evaluate_board(new_test_board)
+                # if self.side is chess.WHITE:
+                #   score *= -1
+                if score > best_opp_score:
+                    best_opp_score = score
+            evaluated_moves.append((move, best_opp_score))
 
-        if not remaining_moves:
-            # All legal moves lead to loss so doesn't matter what is played
-            return random.choice(san_moves)
-
-        best_score = -1000
-        for move in remaining_moves:
-            test_board = board.copy()
-            test_board.push_san(move)
-            score_after_move = self.evaluate_board(test_board)
-            if self.side is chess.BLACK:
-                score_after_move *= -1
-            if score_after_move > best_score:
-                ok_moves = []
-                ok_moves.append(move)
-                best_score = score_after_move
-            elif score_after_move == best_score:
-                ok_moves.append(move)
-        return random.choice(ok_moves)
+        evaluated_moves.sort(key=lambda x: x[1])
+        # evaluated_moves.reverse()
+        click.echo(evaluated_moves)
+        remaining_moves = []
+        remaining_moves.append(evaluated_moves.pop(0))
+        for i in evaluated_moves:
+            if remaining_moves[0][1] < i[1]:
+                break
+            remaining_moves.append(i)
+        random.shuffle(remaining_moves)
+        click.echo(remaining_moves)
+        return remaining_moves[0][0]
 
     def check_opening_sequence(self, board: chess.Board) -> list:
         """Get all next moves suggested by an opening book.
