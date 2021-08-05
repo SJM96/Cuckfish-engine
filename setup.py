@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
 
 with open("requirements.txt") as reqs:
     requirements = reqs.read().splitlines()

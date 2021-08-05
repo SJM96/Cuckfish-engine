@@ -2,8 +2,9 @@ import chess
 import chess.polyglot
 import click
 import random
-import asyncio
 from pathlib import Path
+from itertools import repeat
+from pathos.pools import ProcessPool
 
 
 class ChessEngine:
@@ -14,7 +15,7 @@ class ChessEngine:
         self.side = chess.WHITE if side == "White" else chess.BLACK
         self.move_evals = []
         try:
-            ob_file = Path(__file__).parent / "opening_books" / "KomodoVariety.bin"
+            ob_file = Path(__file__).parent / "opening_books" / ".bin"
             self.opening_book = chess.polyglot.MemoryMappedReader(ob_file)
         except:
             click.echo("No opening book was found.")
@@ -28,7 +29,7 @@ class ChessEngine:
         """
         # All the currently legal moves
         uci_moves = list(board.legal_moves)
-        move_amount = len(uci_moves)
+        self.move_amount = len(uci_moves)
 
         # Play a move from the opening book if book suggests one
         if self.opening_book:
@@ -41,10 +42,16 @@ class ChessEngine:
 
         # Search for move values
         self.move_evals = []
-        with click.progressbar(uci_moves, label="Calculating", length=move_amount) as bar:
+        '''
+        with click.progressbar(uci_moves, label="Calculating", length=self.move_amount) as bar:
             # Amazing loading bar progresses with each calculated move
             for move in bar:
-                self.search_initializer(move, board, move_amount)
+                self.search_initializer(move, board)
+        '''
+        # Multiprocess searching
+        pool = ProcessPool(6)
+        board_list = [board for i in range(self.move_amount)]
+        self.move_evals = pool.map(self.search_initializer, uci_moves, board_list)
 
         # Rank worthiest moves
         self.move_evals.sort(key = lambda x: x[1])
@@ -57,27 +64,27 @@ class ChessEngine:
                 break
 
         # Pick one of the worthiest moves
-        reasoning = (f"Total moves: {move_amount}\nPossible best moves: " +
+        reasoning = (f"Total moves: {self.move_amount}\nPossible best moves: " +
         f"{remaining_moves}\nWith evaluated score: {self.move_evals[0][1]/100}\n")
         random.shuffle(remaining_moves)
         click.echo(reasoning)
         return remaining_moves[0]
 
-    def search_initializer(self, move: chess.Move, board: chess.Board, amount: int):
+    def search_initializer(self, move: chess.Move, board: chess.Board):
         """Begin searching and evaluating values for a move."""
         depth = 1
-        if amount >= 32 or len(board.piece_map()) <= 30:
+        if self.move_amount >= 36:
             depth = 1
-        elif amount >= 22 or len(board.piece_map()) <= 24:
+        elif self.move_amount >= 26 or len(board.piece_map()) <= 28:
             depth = 2
-        elif amount >= 14 or len(board.piece_map()) <= 18:
+        elif self.move_amount >= 18 or len(board.piece_map()) <= 22:
             depth = 3
-        elif amount < 14 or len(board.piece_map()) <= 8:
-            depth = 4
+        elif self.move_amount < 18 or len(board.piece_map()) <= 8:
+            depth = 6
         board.push(move)
         score = -self.alphaBeta(board, -100000, 100000, depth)
-        self.move_evals.append((move, score))
         board.pop()
+        return (move, score)
 
     def check_opening_sequence(self, board: chess.Board) -> list:
         """Get all next moves suggested by an opening book.
